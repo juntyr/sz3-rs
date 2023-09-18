@@ -626,6 +626,7 @@ impl Config {
         self
     }
 
+    #[cfg(feature = "openmp")]
     pub fn openmp(mut self, openmp: bool) -> Self {
         self.openmp = openmp;
         self
@@ -944,12 +945,13 @@ mod tests {
                         .remainder_dim()?;
                     let config = Config::new($eb)
                         .lossless($lossless)
-                        .openmp($openmp)
                         .error_bound($eb)
                         .compression_algorithm($ca)
                         .interpolation_algorithm($ia)
                         .quantization_bincount($qb)
                         .block_size($block_size);
+                    #[cfg(feature = "openmp")]
+                    let config = config.openmp($openmp);
 
                     check_error_bound(&data, &config, $eb)?;
 
