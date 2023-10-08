@@ -847,14 +847,14 @@ mod tests {
                 for (orig, compressed) in data.data().iter().zip(decompressed_data.data()) {
                     assert!((f64::from(*orig) - f64::from(*compressed)).abs() <= absolute_bound)
                 }
-            }
+            },
             ErrorBound::Relative(relative_bound) => {
                 for (orig, compressed) in data.data().iter().zip(decompressed_data.data()) {
                     let orig = f64::from(*orig);
                     let compressed = f64::from(*compressed);
                     assert!((orig - compressed).abs() / range < relative_bound)
                 }
-            }
+            },
             ErrorBound::PSNR(psnr_bound) => {
                 let mse: f64 = data
                     .data()
@@ -867,7 +867,7 @@ mod tests {
                     .sum();
                 let psnr = 20. * (max - min).log10() - 10. * mse.log10();
                 assert!(psnr < psnr_bound);
-            }
+            },
             ErrorBound::L2Norm(l2norm_bound) => {
                 let mse: f64 = data
                     .data()
@@ -881,7 +881,7 @@ mod tests {
                 let l2norm = mse.sqrt();
                 // random fudge factor because its not always really good at matching
                 assert!(l2norm < l2norm_bound * 1.005);
-            }
+            },
             ErrorBound::AbsoluteAndRelative {
                 absolute_bound,
                 relative_bound,
@@ -893,7 +893,7 @@ mod tests {
                     let rel = abs / range;
                     assert!((rel < relative_bound) && (abs < absolute_bound));
                 }
-            }
+            },
             ErrorBound::AbsoluteOrRelative {
                 absolute_bound,
                 relative_bound,
@@ -905,7 +905,7 @@ mod tests {
                     let rel = abs / range;
                     assert!((rel < relative_bound) || (abs < absolute_bound));
                 }
-            }
+            },
         }
 
         Ok(())

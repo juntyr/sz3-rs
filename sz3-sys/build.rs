@@ -32,7 +32,8 @@ fn main() -> Result<(), std::env::VarError> {
 
     println!("cargo:rerun-if-changed=wrapper.hpp");
     let bindings = bindgen::Builder::default()
-        .clang_arg("-x").clang_arg("c++")
+        .clang_arg("-x")
+        .clang_arg("c++")
         .clang_arg("-std=c++17")
         .clang_arg("-I.")
         .clang_arg(format!("-I{}/include", zstd_root))
@@ -57,6 +58,7 @@ fn main() -> Result<(), std::env::VarError> {
         .allowlist_function("dealloc_result_int64_t")
         .allowlist_function("dealloc_config_dims")
         .allowlist_function("dealloc_result")
+        .size_t_is_usize(false)
         .generate()
         .expect("Unable to generate bindings");
 
@@ -73,10 +75,12 @@ fn main() -> Result<(), std::env::VarError> {
         .flag("-std=c++17")
         .include(".")
         .include(format!("{}/include", zstd_root))
+        //.cpp_link_stdlib(None)
+        .static_flag(true)
         .file("lib.cpp");
 
     if cfg!(feature = "openmp") {
-        env::var("DEP_OPENMP_FLAG")  // set by openmp-sys
+        env::var("DEP_OPENMP_FLAG") // set by openmp-sys
             .unwrap()
             .split(' ')
             .for_each(|f| {
@@ -91,13 +95,15 @@ fn main() -> Result<(), std::env::VarError> {
     if cfg!(feature = "openmp") {
         if let Some(link) = env::var_os("DEP_OPENMP_CARGO_LINK_INSTRUCTIONS") {
             for i in env::split_paths(&link) {
-                if i.as_os_str().len() == 0 {
-                    continue
+                if i.as_os_str().is_empty() {
+                    continue;
                 }
                 println!("cargo:{}", i.display());
             }
         }
     }
+
+    println!("cargo:rustc-link-search=/workspace/field-compression-benchmark/codecs/sz3/wasi-sdk-20.0/share/wasi-sysroot/lib/wasm32-wasi");
 
     Ok(())
 }
