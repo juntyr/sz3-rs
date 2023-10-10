@@ -810,9 +810,9 @@ mod tests {
     where
         f64: From<T>,
     {
-        let config = config.clone().error_bound(error_bound.clone());
+        let config = config.clone().error_bound(error_bound);
         let (_decompressed_config, decompressed_data) =
-            decompress::<T, _>(&*compress_with_config(&data, &config)?);
+            decompress::<T, _>(&*compress_with_config(data, &config)?);
         let min = data
             .data()
             .iter()
