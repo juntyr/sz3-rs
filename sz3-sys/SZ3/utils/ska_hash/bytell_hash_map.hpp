@@ -41,7 +41,12 @@ struct sherwood_v8_constants
         return metadata & bits_for_distance;
     }
 
-    static constexpr int num_jump_distances = 100;
+    #if defined(__wasm32__)
+        static constexpr int num_jump_distances = 100;
+    #else
+        static constexpr int num_jump_distances = 126;
+    #endif // defined(__wasm32__)
+
     // jump distances chosen like this:
     // 1. pick the first 16 integers to promote staying in the same block
     // 2. add the next 66 triangular numbers to get even jumps when
@@ -62,6 +67,17 @@ struct sherwood_v8_constants
         3741, 8385, 18915, 42486, 95703, 215496, 485605, 1091503, 2456436,
         5529475, 12437578, 27986421, 62972253, 141700195, 318819126, 717314626,
         1614000520, 3631437253,
+
+    #if !defined(__wasm32__)
+        8170829695, 18384318876, 41364501751,
+        93070021080, 209407709220, 471167588430, 1060127437995, 2385287281530,
+        5366895564381, 12075513791265, 27169907873235, 61132301007778,
+        137547673121001, 309482258302503, 696335090510256, 1566753939653640,
+        3525196427195653, 7931691866727775, 17846306747368716,
+        40154190394120111, 90346928493040500, 203280588949935750,
+        457381324898247375, 1029107980662394500, 2315492957028380766,
+        5209859150892887590,
+    #endif // !defined(__wasm32__)
     };
 };
 template<typename T>

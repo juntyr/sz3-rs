@@ -75,8 +75,6 @@ fn main() -> Result<(), std::env::VarError> {
         .flag("-std=c++17")
         .include(".")
         .include(format!("{}/include", zstd_root))
-        //.cpp_link_stdlib(None)
-        .static_flag(true)
         .file("lib.cpp");
 
     if cfg!(feature = "openmp") {
@@ -102,8 +100,6 @@ fn main() -> Result<(), std::env::VarError> {
             }
         }
     }
-
-    println!("cargo:rustc-link-search=/workspace/field-compression-benchmark/codecs/sz3/wasi-sdk-20.0/share/wasi-sysroot/lib/wasm32-wasi");
 
     Ok(())
 }
