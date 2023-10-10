@@ -239,9 +239,10 @@ impl ErrorBound {
     }
 }
 
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, Default)]
 pub enum InterpolationAlgorithm {
     Linear,
+    #[default]
     Cubic,
 }
 
@@ -262,15 +263,10 @@ impl InterpolationAlgorithm {
     }
 }
 
-impl Default for InterpolationAlgorithm {
-    fn default() -> Self {
-        InterpolationAlgorithm::Cubic
-    }
-}
-
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, Default)]
 pub enum LossLess {
     LossLessBypass,
+    #[default]
     ZSTD,
 }
 
@@ -291,15 +287,10 @@ impl LossLess {
     }
 }
 
-impl Default for LossLess {
-    fn default() -> Self {
-        LossLess::ZSTD
-    }
-}
-
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, Default)]
 pub enum Encoder {
     SkipEncoder,
+    #[default]
     HuffmanEncoder,
     ArithmeticEncoder,
 }
@@ -320,12 +311,6 @@ impl Encoder {
             Self::HuffmanEncoder => 1,
             Self::ArithmeticEncoder => 2,
         }
-    }
-}
-
-impl Default for Encoder {
-    fn default() -> Self {
-        Encoder::HuffmanEncoder
     }
 }
 
@@ -365,8 +350,8 @@ where
 
     fn deref(&self) -> &Self::Target {
         match self {
-            Self::Owned(owned) => &**owned,
-            Self::Borrowed(borrowed) => *borrowed,
+            Self::Owned(owned) => owned,
+            Self::Borrowed(borrowed) => borrowed,
         }
     }
 }
@@ -497,14 +482,14 @@ impl<V: SZ3Compressible> DimensionedData<'static, V> {
 impl<'a, V: SZ3Compressible> DimensionedData<'a, V> {
     pub fn build<T: std::ops::Deref<Target = [V]>>(data: &'a T) -> DimensionedDataBuilder<'a, V> {
         DimensionedDataBuilder {
-            data: &*data,
+            data,
             dims: vec![],
             remainder: data.len(),
         }
     }
 
     pub fn data(&self) -> &[V] {
-        &*self.data
+        &self.data
     }
 
     pub fn num_dims(&self) -> usize {
