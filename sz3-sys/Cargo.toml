@@ -9,7 +9,7 @@ openmp = ["dep:openmp-sys"]
 
 [dependencies]
 openmp-sys = { version = "1.2.3", optional = true }
-zstd-sys = { path = "../../zstd-rs/zstd-safe/zstd-sys", version = "2.0.8", default-features = false }
+zstd-sys = { git = "https://github.com/juntyr/zstd-rs", rev = "ec5c85a", default-features = false }
 
 [build-dependencies]
 bindgen = "0.68.1"
