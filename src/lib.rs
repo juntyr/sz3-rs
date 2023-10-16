@@ -367,11 +367,11 @@ mod private {
         unsafe fn compress(
             config: sz3_sys::SZ_Config,
             data: *const Self,
-            len: *mut sz3_sys::size_t,
+            len: *mut usize,
         ) -> *mut i8;
         unsafe fn decompress(
             compressed_data: *const i8,
-            compressed_len: sz3_sys::size_t,
+            compressed_len: usize,
             uncompressed: *mut *mut Self,
         ) -> sz3_sys::SZ_Config;
         unsafe fn dealloc(data: *mut Self);
@@ -380,14 +380,14 @@ mod private {
         unsafe fn compress(
             config: sz3_sys::SZ_Config,
             data: *const Self,
-            len: *mut sz3_sys::size_t,
+            len: *mut usize,
         ) -> *mut i8 {
             sz3_sys::compress_float(config, data, len) as _
         }
 
         unsafe fn decompress(
             compressed_data: *const i8,
-            compressed_len: sz3_sys::size_t,
+            compressed_len: usize,
             uncompressed: *mut *mut Self,
         ) -> sz3_sys::SZ_Config {
             sz3_sys::decompress_float(compressed_data as _, compressed_len, uncompressed)
@@ -401,14 +401,14 @@ mod private {
         unsafe fn compress(
             config: sz3_sys::SZ_Config,
             data: *const Self,
-            len: *mut sz3_sys::size_t,
+            len: *mut usize,
         ) -> *mut i8 {
             sz3_sys::compress_double(config, data, len) as _
         }
 
         unsafe fn decompress(
             compressed_data: *const i8,
-            compressed_len: sz3_sys::size_t,
+            compressed_len: usize,
             uncompressed: *mut *mut Self,
         ) -> sz3_sys::SZ_Config {
             sz3_sys::decompress_double(compressed_data as _, compressed_len, uncompressed)
@@ -422,14 +422,14 @@ mod private {
         unsafe fn compress(
             config: sz3_sys::SZ_Config,
             data: *const Self,
-            len: *mut sz3_sys::size_t,
+            len: *mut usize,
         ) -> *mut i8 {
             sz3_sys::compress_int32_t(config, data, len) as _
         }
 
         unsafe fn decompress(
             compressed_data: *const i8,
-            compressed_len: sz3_sys::size_t,
+            compressed_len: usize,
             uncompressed: *mut *mut Self,
         ) -> sz3_sys::SZ_Config {
             sz3_sys::decompress_int32_t(compressed_data as _, compressed_len, uncompressed)
@@ -443,14 +443,14 @@ mod private {
         unsafe fn compress(
             config: sz3_sys::SZ_Config,
             data: *const Self,
-            len: *mut sz3_sys::size_t,
+            len: *mut usize,
         ) -> *mut i8 {
             sz3_sys::compress_int64_t(config, data, len) as _
         }
 
         unsafe fn decompress(
             compressed_data: *const i8,
-            compressed_len: sz3_sys::size_t,
+            compressed_len: usize,
             uncompressed: *mut *mut Self,
         ) -> sz3_sys::SZ_Config {
             sz3_sys::decompress_int64_t(compressed_data as _, compressed_len, uncompressed)
@@ -465,13 +465,13 @@ mod private {
 #[derive(Clone, Debug)]
 pub struct DimensionedData<'a, V: SZ3Compressible> {
     data: OwnedOrBorrowed<'a, [V], SZ3DecompressionResult<V>>,
-    dims: Vec<sz3_sys::size_t>,
+    dims: Vec<usize>,
 }
 
 #[derive(Clone, Debug)]
 pub struct DimensionedDataBuilder<'a, V> {
     data: &'a [V],
-    dims: Vec<sz3_sys::size_t>,
+    dims: Vec<usize>,
     remainder: usize,
 }
 
@@ -500,8 +500,8 @@ impl<'a, V: SZ3Compressible> DimensionedData<'a, V> {
         &self.data
     }
 
-    pub fn num_dims(&self) -> usize {
-        self.dims.len()
+    pub fn dims(&self) -> &[usize] {
+        &self.dims
     }
 
     fn len(&self) -> usize {
@@ -521,7 +521,7 @@ pub enum SZ3Error {
          {remainder} cleanly"
     )]
     InvalidDimensionSize {
-        dims: Vec<sz3_sys::size_t>,
+        dims: Vec<usize>,
         len: usize,
         wanted: usize,
         remainder: usize,
@@ -533,7 +533,7 @@ pub enum SZ3Error {
          missing a dimension of {remainder}"
     )]
     UnderSpecifiedDimensions {
-        dims: Vec<sz3_sys::size_t>,
+        dims: Vec<usize>,
         len: usize,
         remainder: usize,
     },
@@ -702,7 +702,7 @@ pub fn compress_with_config<V: SZ3Compressible>(
     config: &Config,
 ) -> Result<SZ3CompressionResult> {
     if let Some(prediction_dimension) = config.compression_algorithm.prediction_dimension() {
-        let data_dimensions = data.num_dims() as u32;
+        let data_dimensions = data.dims().len() as u32;
         if prediction_dimension == 0 {
             return Err(SZ3Error::PredictionDimensionZero);
         } else if prediction_dimension > data_dimensions {
@@ -713,14 +713,14 @@ pub fn compress_with_config<V: SZ3Compressible>(
         }
     }
 
-    let block_size = config.block_size.unwrap_or(match data.num_dims() {
+    let block_size = config.block_size.unwrap_or(match data.dims().len() {
         1 => 128,
         2 => 16,
         _ => 6,
     });
 
     let raw_config = sz3_sys::SZ_Config {
-        N: data.num_dims() as _,
+        N: data.dims().len() as _,
         dims: data.dims.as_ptr() as _,
         num: data.len() as _,
         errorBoundMode: config.error_bound.code(),
@@ -736,7 +736,7 @@ pub fn compress_with_config<V: SZ3Compressible>(
         interpBlockSize: config.compression_algorithm.interp_block_size() as _,
         pred_dim: config
             .compression_algorithm
-            .encode_prediction_dimension(data.num_dims() as _) as _,
+            .encode_prediction_dimension(data.dims().len() as _) as _,
         openmp: config.openmp,
         lossless: config.lossless.code(),
         encoder: config.encoder.code(),
@@ -746,7 +746,7 @@ pub fn compress_with_config<V: SZ3Compressible>(
         stride: block_size as _,
     };
 
-    let mut len: sz3_sys::size_t = 0;
+    let mut len: usize = 0;
     let data = unsafe { V::compress(raw_config, data.as_ptr() as _, &mut len) };
 
     Ok(SZ3CompressionResult {

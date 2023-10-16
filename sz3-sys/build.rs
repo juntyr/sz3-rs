@@ -56,7 +56,6 @@ fn main() -> Result<(), std::env::VarError> {
         .allowlist_function("dealloc_result_int64_t")
         .allowlist_function("dealloc_config_dims")
         .allowlist_function("dealloc_result")
-        .size_t_is_usize(false)
         .generate()
         .expect("Unable to generate bindings");
 
