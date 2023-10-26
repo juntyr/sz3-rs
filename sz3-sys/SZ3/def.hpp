@@ -2,6 +2,7 @@
 #define _DEF_HPP
 
 #include <cmath>
+#include <cstdint>
 
 #if defined(__wasm__)
     #include <cstdlib>
