@@ -7,8 +7,6 @@
 #if defined(__wasm__)
     #include <cstdlib>
     #include <new>
-    #include <stdexcept>
-    #include <cstdio>
 #endif // defined(__wasm__)
 
 namespace SZ3 {
@@ -19,10 +17,10 @@ namespace SZ3 {
 }
 
 #if defined(__wasm__)
-    extern "C" void __cxa_pure_virtual() { printf("__cxa_pure_virtual\n"); abort(); }
-    extern "C" void __cxa_allocate_exception() { printf("__cxa_allocate_exception\n"); abort(); }
-    extern "C" void __cxa_throw() { printf("__cxa_throw\n"); abort(); }
-    extern "C" unsigned int __cxa_uncaught_exceptions() { printf("__cxa_uncaught_exceptions\n"); return 0; }
+    extern "C" void __cxa_pure_virtual() { abort(); }
+    extern "C" void __cxa_allocate_exception() { abort(); }
+    extern "C" void __cxa_throw() { abort(); }
+    extern "C" unsigned int __cxa_uncaught_exceptions() { return 0; }
 
     void* operator new(std::size_t n)
     {
@@ -53,15 +51,6 @@ namespace SZ3 {
     {
         std::free(p);
     }
-
-    std::length_error::~length_error() { printf("std::length_error::~length_error()\n"); abort(); }
-    std::bad_array_new_length::bad_array_new_length() noexcept { printf("std::bad_array_new_length::bad_array_new_length()\n"); abort(); }
-    std::bad_array_new_length::~bad_array_new_length() { printf("std::bad_array_new_length::~bad_array_new_length()\n"); abort(); }
-    std::exception::~exception() { printf("std::exception::~exception()\n"); abort(); }
-    std::bad_alloc::bad_alloc() noexcept { printf("std::bad_alloc::bad_alloc()\n"); abort(); }
-    const char* std::logic_error::what() const noexcept { printf("std::logic_error::what()\n"); abort(); }
-    const char* std::bad_array_new_length::what() const noexcept { printf("std::bad_array_new_length::what()\n"); abort(); }
-    const char* std::exception::what() const noexcept { printf("std::exception::what()\n"); abort(); }
 #endif // defined(__wasm__)
 
 #endif
