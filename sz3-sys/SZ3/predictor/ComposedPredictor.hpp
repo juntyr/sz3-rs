@@ -9,7 +9,7 @@
 #include <iostream>
 #include <memory>
 
-namespace SZ {
+namespace SZ3 {
 
     template<class T, uint N>
     class ComposedPredictor : public concepts::PredictorInterface<T, N> {
@@ -77,7 +77,7 @@ namespace SZ {
             c += sizeof(size_t);
             if (selection.size()) {
                 HuffmanEncoder<int> selection_encoder;
-                selection_encoder.preprocess_encode(selection, 0);
+                selection_encoder.preprocess_encode(selection, predict_error.size());
                 selection_encoder.save(c);
                 selection_encoder.encode(selection, c);
                 selection_encoder.postprocess_encode();
@@ -98,8 +98,8 @@ namespace SZ {
             // TODO: check correctness
             size_t selection_size = *reinterpret_cast<const size_t *>(c);
             c += sizeof(size_t);
-            remaining_length -= sizeof(size_t);
             if (selection_size > 0) {
+                remaining_length -= sizeof(size_t);
                 HuffmanEncoder<int> selection_encoder;
                 selection_encoder.load(c, remaining_length);
                 this->selection = selection_encoder.decode(c, selection_size);

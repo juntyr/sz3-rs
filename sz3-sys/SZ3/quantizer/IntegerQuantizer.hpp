@@ -8,7 +8,7 @@
 #include "SZ3/def.hpp"
 #include "SZ3/quantizer/Quantizer.hpp"
 
-namespace SZ {
+namespace SZ3 {
 
     template<class T>
     class LinearQuantizer : public concepts::QuantizerInterface<T> {
@@ -135,7 +135,7 @@ namespace SZ {
         }
 
         size_t size_est() {
-            return unpred.size() * sizeof(T) + sizeof(uint8_t) + sizeof(double) + sizeof(int) + sizeof(size_t);
+            return unpred.size() * sizeof(T);
         }
 
         void save(unsigned char *&c) const {

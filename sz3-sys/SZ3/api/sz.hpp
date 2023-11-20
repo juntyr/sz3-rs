@@ -11,7 +11,7 @@
  * @tparam T source data type
  * @param config compression configuration. Please update the config with 1). data dimension and shape and 2). desired settings.
  * @param data source data
- * @param outSize compressed data size in bytes
+ * @param cmpSize compressed data size in bytes
  * @return compressed data, remember to 'delete []' when the data is no longer needed.
 
 The compression algorithms are:
@@ -26,53 +26,54 @@ ALGO_LORENZO_REG:
  can be enabled or disabled independently by conf settings (lorenzo, lorenzo2, regression, regression2).
 
 Interpolation+lorenzo example:
-SZ::Config conf(100, 200, 300); // 300 is the fastest dimension
-conf.cmprAlgo = SZ::ALGO_INTERP_LORENZO;
-conf.errorBoundMode = SZ::EB_ABS; // refer to def.hpp for all supported error bound mode
+SZ3::Config conf(100, 200, 300); // 300 is the fastest dimension
+conf.cmprAlgo = SZ3::ALGO_INTERP_LORENZO;
+conf.errorBoundMode = SZ3::EB_ABS; // refer to def.hpp for all supported error bound mode
 conf.absErrorBound = 1E-3; // absolute error bound 1e-3
 char *compressedData = SZ_compress(conf, data, outSize);
 
 Interpolation example:
-SZ::Config conf(100, 200, 300); // 300 is the fastest dimension
-conf.cmprAlgo = SZ::ALGO_INTERP;
-conf.errorBoundMode = SZ::EB_REL; // refer to def.hpp for all supported error bound mode
+SZ3::Config conf(100, 200, 300); // 300 is the fastest dimension
+conf.cmprAlgo = SZ3::ALGO_INTERP;
+conf.errorBoundMode = SZ3::EB_REL; // refer to def.hpp for all supported error bound mode
 conf.relErrorBound = 1E-3; // value-rang-based error bound 1e-3
 char *compressedData = SZ_compress(conf, data, outSize);
 
 Lorenzo/regression example :
-SZ::Config conf(100, 200, 300); // 300 is the fastest dimension
-conf.cmprAlgo = SZ::ALGO_LORENZO_REG;
+SZ3::Config conf(100, 200, 300); // 300 is the fastest dimension
+conf.cmprAlgo = SZ3::ALGO_LORENZO_REG;
 conf.lorenzo = true; // only use 1st order lorenzo
 conf.lorenzo2 = false;
 conf.regression = false;
 conf.regression2 = false;
-conf.errorBoundMode = SZ::EB_ABS; // refer to def.hpp for all supported error bound mode
+conf.errorBoundMode = SZ3::EB_ABS; // refer to def.hpp for all supported error bound mode
 conf.absErrorBound = 1E-3; // absolute error bound 1e-3
 char *compressedData = SZ_compress(conf, data, outSize);
  */
 template<class T>
-char *SZ_compress(const SZ::Config &conf, const T *data, size_t &outSize) {
-    SZ::Config confCopy(conf);
+char *SZ_compress(const SZ3::Config &conf, const T *data, size_t &cmpSize) {
+    using namespace SZ3;
+    Config confCopy(conf);
     char *cmpData;
     if (conf.N == 1) {
-        cmpData = SZ_compress_impl<T, 1>(confCopy, data, outSize);
+        cmpData = SZ_compress_impl<T, 1>(confCopy, data, cmpSize);
     } else if (conf.N == 2) {
-        cmpData = SZ_compress_impl<T, 2>(confCopy, data, outSize);
+        cmpData = SZ_compress_impl<T, 2>(confCopy, data, cmpSize);
     } else if (conf.N == 3) {
-        cmpData = SZ_compress_impl<T, 3>(confCopy, data, outSize);
+        cmpData = SZ_compress_impl<T, 3>(confCopy, data, cmpSize);
     } else if (conf.N == 4) {
-        cmpData = SZ_compress_impl<T, 4>(confCopy, data, outSize);
+        cmpData = SZ_compress_impl<T, 4>(confCopy, data, cmpSize);
     } else {
         printf("Data dimension higher than 4 is not supported.\n");
         exit(0);
     }
     {
         //save config
-        SZ::uchar *cmpDataPos = (SZ::uchar *) cmpData + outSize;
+        uchar *cmpDataPos = (uchar *) cmpData + cmpSize;
         confCopy.save(cmpDataPos);
         size_t newSize = (char *) cmpDataPos - cmpData;
-        SZ::write(int(newSize - outSize), cmpDataPos);
-        outSize = (char *) cmpDataPos - cmpData;
+        write(int(newSize - cmpSize), cmpDataPos);
+        cmpSize = (char *) cmpDataPos - cmpData;
     }
     return cmpData;
 }
@@ -80,7 +81,7 @@ char *SZ_compress(const SZ::Config &conf, const T *data, size_t &outSize) {
 
 /**
  * API for decompression
- * Similar with SZ_decompress(SZ::Config &conf, char *cmpData, size_t cmpSize)
+ * Similar with SZ_decompress(SZ3::Config &conf, char *cmpData, size_t cmpSize)
  * The only difference is this one needs pre-allocated decData as input
  * @tparam T decompressed data type
  * @param conf configuration placeholder. It will be overwritten by the compression configuration
@@ -89,18 +90,19 @@ char *SZ_compress(const SZ::Config &conf, const T *data, size_t &outSize) {
  * @param decData pre-allocated memory space for decompressed data
 
  example:
- auto decompressedData = new float[100x200x300];
- SZ::Config conf;
- SZ_decompress(conf, char *cmpData, size_t cmpSize, decompressedData);
+ auto decData = new float[100*200*300];
+ SZ3::Config conf;
+ SZ_decompress(conf, cmpData, cmpSize, decData);
 
  */
 template<class T>
-void SZ_decompress(SZ::Config &conf, char *cmpData, size_t cmpSize, T *&decData) {
+void SZ_decompress(SZ3::Config &conf, char *cmpData, size_t cmpSize, T *&decData) {
+    using namespace SZ3;
     {
         //load config
         int confSize;
         memcpy(&confSize, cmpData + (cmpSize - sizeof(int)), sizeof(int));
-        SZ::uchar const *cmpDataPos = (SZ::uchar *) cmpData + (cmpSize - sizeof(int) - confSize);
+        uchar const *cmpDataPos = (uchar *) cmpData + (cmpSize - sizeof(int) - confSize);
         conf.load(cmpDataPos);
     }
     if (decData == nullptr) {
@@ -129,11 +131,12 @@ void SZ_decompress(SZ::Config &conf, char *cmpData, size_t cmpSize, T *&decData)
  * @return decompressed data, remember to 'delete []' when the data is no longer needed.
 
  example:
- SZ::Config conf;
- float decompressedData = SZ_decompress(conf, char *cmpData, size_t cmpSize)
+ SZ3::Config conf;
+ float decompressedData = SZ_decompress(conf, cmpData, cmpSize)
  */
 template<class T>
-T *SZ_decompress(SZ::Config &conf, char *cmpData, size_t cmpSize) {
+T *SZ_decompress(SZ3::Config &conf, char *cmpData, size_t cmpSize) {
+    using namespace SZ3;
     T *decData = nullptr;
     SZ_decompress<T>(conf, cmpData, cmpSize, decData);
     return decData;

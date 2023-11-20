@@ -7,7 +7,7 @@
 
 #include "Config.hpp"
 
-namespace SZ {
+namespace SZ3 {
     template<class T>
     T data_range(const T *data, size_t num) {
         T max = data[0];
@@ -31,23 +31,23 @@ namespace SZ {
     }
 
     template<class T>
-    void calAbsErrorBound(SZ::Config &conf, const T *data, T range = 0) {
+    void calAbsErrorBound(Config &conf, const T *data, T range = 0) {
         if (conf.errorBoundMode != EB_ABS) {
             if (conf.errorBoundMode == EB_REL) {
                 conf.errorBoundMode = EB_ABS;
-                conf.absErrorBound = conf.relErrorBound * ((range > 0) ? range : SZ::data_range(data, conf.num));
+                conf.absErrorBound = conf.relErrorBound * ((range > 0) ? range : data_range(data, conf.num));
             } else if (conf.errorBoundMode == EB_PSNR) {
                 conf.errorBoundMode = EB_ABS;
-                conf.absErrorBound = computeABSErrBoundFromPSNR(conf.psnrErrorBound, 0.99, ((range > 0) ? range : SZ::data_range(data, conf.num)));
+                conf.absErrorBound = computeABSErrBoundFromPSNR(conf.psnrErrorBound, 0.99, ((range > 0) ? range : data_range(data, conf.num)));
             } else if (conf.errorBoundMode == EB_L2NORM) {
                 conf.errorBoundMode = EB_ABS;
                 conf.absErrorBound = sqrt(3.0 / conf.num) * conf.l2normErrorBound;
             } else if (conf.errorBoundMode == EB_ABS_AND_REL) {
                 conf.errorBoundMode = EB_ABS;
-                conf.absErrorBound = std::min(conf.absErrorBound, conf.relErrorBound * ((range > 0) ? range : SZ::data_range(data, conf.num)));
+                conf.absErrorBound = std::min(conf.absErrorBound, conf.relErrorBound * ((range > 0) ? range : data_range(data, conf.num)));
             } else if (conf.errorBoundMode == EB_ABS_OR_REL) {
                 conf.errorBoundMode = EB_ABS;
-                conf.absErrorBound = std::max(conf.absErrorBound, conf.relErrorBound * ((range > 0) ? range : SZ::data_range(data, conf.num)));
+                conf.absErrorBound = std::max(conf.absErrorBound, conf.relErrorBound * ((range > 0) ? range : data_range(data, conf.num)));
             } else {
                 printf("Error, error bound mode not supported\n");
                 exit(0);
@@ -77,11 +77,11 @@ namespace SZ {
     }
 
     template<typename Type>
-    void verify(Type *ori_data, Type *data, size_t num_elements, double &psnr, double &nrmse) {
+    void verify(Type *ori_data, Type *data, size_t num_elements, double &psnr, double &nrmse, double &max_diff) {
         size_t i = 0;
         double Max = ori_data[0];
         double Min = ori_data[0];
-        double diffMax = fabs(data[0] - ori_data[0]);
+        max_diff = fabs(data[0] - ori_data[0]);
         double diff_sum = 0;
         double maxpw_relerr = 0;
         double sum1 = 0, sum2 = 0, l2sum = 0;
@@ -110,8 +110,8 @@ namespace SZ {
                     maxpw_relerr = relerr;
             }
 
-            if (diffMax < err)
-                diffMax = err;
+            if (max_diff < err)
+                max_diff = err;
             prodSum += (ori_data[i] - mean1) * (data[i] - mean2);
             sum3 += (ori_data[i] - mean1) * (ori_data[i] - mean1);
             sum4 += (data[i] - mean2) * (data[i] - mean2);
@@ -131,8 +131,8 @@ namespace SZ {
         double normErr_norm = normErr / sqrt(l2sum);
 
         printf("Min=%.20G, Max=%.20G, range=%.20G\n", Min, Max, range);
-        printf("Max absolute error = %.2G\n", diffMax);
-        printf("Max relative error = %.2G\n", diffMax / (Max - Min));
+        printf("Max absolute error = %.2G\n", max_diff);
+        printf("Max relative error = %.2G\n", max_diff / (Max - Min));
         printf("Max pw relative error = %.2G\n", maxpw_relerr);
         printf("PSNR = %f, NRMSE= %.10G\n", psnr, nrmse);
         printf("normError = %f, normErr_norm = %f\n", normErr, normErr_norm);
@@ -143,8 +143,14 @@ namespace SZ {
 
     template<typename Type>
     void verify(Type *ori_data, Type *data, size_t num_elements) {
-        double psnr, nrmse;
-        verify(ori_data, data, num_elements, psnr, nrmse);
+        double psnr, nrmse, max_diff;
+        verify(ori_data, data, num_elements, psnr, nrmse, max_diff);
+    }
+
+    template<typename Type>
+    void verify(Type *ori_data, Type *data, size_t num_elements, double &psnr, double &nrmse) {
+        double max_diff;
+        verify(ori_data, data, num_elements, psnr, nrmse, max_diff);
     }
 };
 

@@ -16,7 +16,7 @@
 #include "SZ3/utils/Config.hpp"
 #include <list>
 
-namespace SZ {
+namespace SZ3 {
     using namespace SZMETA;
 
     template<class T, uint N, class Quantizer>
@@ -28,7 +28,9 @@ namespace SZ {
                        conf.regression, conf.absErrorBound),
                 precision(conf.absErrorBound),
                 conf(conf) {
-            assert(N == 3 && "SZMeta Front only support 3D data");
+            if (N != 1 && N != 3){
+                throw std::invalid_argument("SZMeta Front only support 1D or 3D data");
+            }
         }
 
         ~SZFastFrontend() {
@@ -39,22 +41,30 @@ namespace SZ {
 
 
         std::vector<int> compress(T *data) {
-            return compress_3d(data);
+            if (N == 1) {
+                return compress_1d(data);
+            } else {
+                return compress_3d(data);
+            }
         };
 
         T *decompress(std::vector<int> &quant_inds, T *dec_data) {
-            return decompress_3d(quant_inds, dec_data);
+            if (N == 1) {
+                return decompress_1d(quant_inds, dec_data);
+            } else {
+                return decompress_3d(quant_inds, dec_data);
+            }
         };
 
 
         void save(uchar *&c) {
-
-            write(params, c);
-            write(precision, c);
+            if (N == 3) {
+                write(params, c);
+                write(precision, c);
 //            write(intv_radius, c);
-            write(mean_info.use_mean, c);
-            write(mean_info.mean, c);
-            write(reg_count, c);
+                write(mean_info.use_mean, c);
+                write(mean_info.mean, c);
+                write(reg_count, c);
 //            write(unpred_count_buffer, size.block_size * size.block_size, c);
 //            T *unpred_data_buffer_pos = unpred_data_buffer;
 //            for (int i = 0; i < size.block_size; i++) {
@@ -68,17 +78,18 @@ namespace SZ {
 //            }
 
 //            Huffman_encode_tree_and_data(SELECTOR_RADIUS, indicator, size.num_blocks, c);
-            HuffmanEncoder<int> selector_encoder = HuffmanEncoder<int>();
-            selector_encoder.preprocess_encode(indicator, SELECTOR_RADIUS);
-            selector_encoder.save(c);
-            selector_encoder.encode(indicator, c);
-            selector_encoder.postprocess_encode();
+//            indicator_huffman.preprocess_encode(indicator, SELECTOR_RADIUS);
+                indicator_huffman.save(c);
+                indicator_huffman.encode(indicator, c);
+                indicator_huffman.postprocess_encode();
+                auto *c2 = c;
 
 //	convertIntArray2ByteArray_fast_1b_to_result_sz(indicator, size.num_blocks, c);
 
-            if (reg_count) {
-                encode_regression_coefficients(reg_params_type, reg_unpredictable_data, RegCoeffNum3d * reg_count,
-                                               reg_unpredictable_data_pos - reg_unpredictable_data, c);
+                if (reg_count) {
+                    encode_regression_coefficients(reg_params_type, reg_unpredictable_data, RegCoeffNum3d * reg_count,
+                                                   reg_unpredictable_data_pos - reg_unpredictable_data, reg_huffman, c);
+                }
             }
 
             quantizer.save(c);
@@ -87,48 +98,36 @@ namespace SZ {
         void load(const uchar *&c, size_t &remaining_length) {
             clear();
             const uchar *c_pos = c;
+            if (N == 3) {
 
-            read(params, c, remaining_length);
-            read(precision, c, remaining_length);
+                read(params, c, remaining_length);
+                read(precision, c, remaining_length);
 //            read(intv_radius, c, remaining_length);
-            read(mean_info.use_mean, c, remaining_length);
-            read(mean_info.mean, c, remaining_length);
-            read(reg_count, c, remaining_length);
+                read(mean_info.use_mean, c, remaining_length);
+                read(mean_info.mean, c, remaining_length);
+                read(reg_count, c, remaining_length);
 
-            size_t r1 = conf.dims[0];
-            size_t r2 = conf.dims[1];
-            size_t r3 = conf.dims[2];
-            size = SZMETA::DSize_3d(r1, r2, r3, params.block_size);
-            // prepare unpred buffer for vectorization
-            est_unpred_count_per_index = size.num_blocks * size.block_size * 1;
-            // if(!params.block_independant) est_unpred_count_per_index /= 20;
-//            unpred_count_buffer = (int *) malloc(size.block_size * size.block_size * sizeof(T));
-//            read(unpred_count_buffer, size.block_size * size.block_size, c, remaining_length);
-//            unpred_data_buffer = (T *) malloc(
-//                    size.block_size * size.block_size * est_unpred_count_per_index * sizeof(T));
-//            T *unpred_data_buffer_pos = unpred_data_buffer;
-//            for (int i = 0; i < size.block_size; i++) {
-//                for (int j = 0; j < size.block_size; j++) {
-//                    memcpy(unpred_data_buffer_pos, c,
-//                           unpred_count_buffer[i * size.block_size + j] * sizeof(T));
-//                    c += unpred_count_buffer[i * size.block_size + j] * sizeof(T);
-//                    unpred_data_buffer_pos += est_unpred_count_per_index;
-//                }
-//            }
-//            memset(unpred_count_buffer, 0, size.block_size * size.block_size * sizeof(int));
-//	unsigned char * indicator = convertByteArray2IntArray_fast_1b_sz(size.num_blocks, c, (size.num_blocks - 1)/8 + 1);
-            HuffmanEncoder<int> selector_encoder = HuffmanEncoder<int>();
-            selector_encoder.load(c, remaining_length);
-            indicator = selector_encoder.decode(c, size.num_blocks);
-            selector_encoder.postprocess_decode();
+                size_t r1 = conf.dims[0];
+                size_t r2 = conf.dims[1];
+                size_t r3 = conf.dims[2];
+                size = SZMETA::DSize_3d(r1, r2, r3, params.block_size);
+                // prepare unpred buffer for vectorization
+                est_unpred_count_per_index = size.num_blocks * size.block_size * 1;
+
+                indicator_huffman = HuffmanEncoder<int>();
+                indicator_huffman.load(c, remaining_length);
+                indicator = indicator_huffman.decode(c, size.num_blocks);
+                indicator_huffman.postprocess_decode();
 
 
-            if (reg_count) {
-                reg_params = decode_regression_coefficients(c, reg_count, size.block_size, precision,
-                                                            params);
+                if (reg_count) {
+                    reg_params = decode_regression_coefficients(c, reg_count, size.block_size, precision,
+                                                                params);
+                }
             }
             quantizer.load(c, remaining_length);
             remaining_length -= c_pos - c;
+
         }
 
 
@@ -140,6 +139,7 @@ namespace SZ {
             if (reg_unpredictable_data != nullptr) {
                 free(reg_unpredictable_data);
                 reg_unpredictable_data = nullptr;
+                reg_unpredictable_data_pos = nullptr;
             }
 //            if (unpred_data_buffer != nullptr) {
 //                free(unpred_data_buffer);
@@ -153,12 +153,13 @@ namespace SZ {
                 free(reg_params);
                 reg_params = nullptr;
             }
+            quantizer.clear();
         }
 
         size_t size_est() {
             return quantizer.size_est() //unpred
-                   + indicator.size() * sizeof(int) //loren or reg indicator
-                   + 2 * RegCoeffNum3d * reg_count * sizeof(int) // reg coeff quant
+                   + indicator.size() * sizeof(int) + indicator_huffman.size_est()//loren or reg indicator
+                   + RegCoeffNum3d * reg_count * sizeof(int) + reg_huffman.size_est() // reg coeff quant
                    + (reg_unpredictable_data_pos - reg_unpredictable_data) * sizeof(float); //reg coeff unpred
         }
 
@@ -167,9 +168,28 @@ namespace SZ {
             return quantizer.get_radius();
         }
 
-        size_t get_num_elements() const { return size.num_elements; };
+        size_t get_num_elements() const {
+            return conf.num;
+        };
 
     private:
+        std::vector<int> compress_1d(T *data) {
+            std::vector<int> quant_bins(conf.num);
+            quant_bins[0] = quantizer.quantize_and_overwrite(data[0], 0);
+            for (size_t i = 1; i < conf.num; i++) {
+                quant_bins[i] = quantizer.quantize_and_overwrite(data[i], data[i - 1]);
+            }
+            return quant_bins;
+        }
+
+        T *decompress_1d(std::vector<int> &quant_inds, T *dec_data) {
+            dec_data[0] = quantizer.recover(0, quant_inds[0]);
+            for (size_t i = 1; i < conf.num; i++) {
+                dec_data[i] = quantizer.recover(dec_data[i - 1], quant_inds[i]);
+            }
+            return dec_data;
+        }
+
         //        unsigned char *
 //        compress_3d(const T *data, size_t r1, size_t r2, size_t r3, double precision, size_t &compressed_size,
 //                    const SZMETA::meta_params &params, SZMETA::CompressStats &compress_info) {
@@ -371,6 +391,12 @@ namespace SZ {
             free(pred_buffer);
             free(reg_params);
 
+            if (reg_count) {
+                reg_huffman = HuffmanEncoder<int>();
+                reg_huffman.preprocess_encode(reg_params_type, RegCoeffNum3d * reg_count, RegCoeffRadius * 2);
+            }
+            indicator_huffman = HuffmanEncoder<int>();
+            indicator_huffman.preprocess_encode(indicator, SELECTOR_RADIUS);
 
 //            printf("%lu %lu\n", reg_count, block_cnt);
 
@@ -380,6 +406,7 @@ namespace SZ {
         //T *
 //        meta_decompress_3d(const unsigned char *compressed, size_t r1, size_t r2, size_t r3) {
         T *decompress_3d(std::vector<int> &quant_inds, T *dec_data) {
+
 
             int *type = quant_inds.data();
 //            T *dec_data = new T[size.num_elements];
@@ -570,7 +597,7 @@ namespace SZ {
         int *reg_params_type = nullptr;
         float *reg_unpredictable_data = nullptr;
         float *reg_params = nullptr;
-        float *reg_unpredictable_data_pos;
+        float *reg_unpredictable_data_pos = nullptr;
 
         SZMETA::meanInfo<T> mean_info;
         int capacity = 0; // not used, capacity is controlled by quantizer
@@ -578,6 +605,9 @@ namespace SZ {
         int est_unpred_count_per_index = 0; // not used, unpredictable data is controlled by quantizer
         int *unpred_count_buffer = nullptr; // not used, unpredictable data is controlled by quantizer
         T *unpred_data_buffer = nullptr; // not used, unpredictable data is controlled by quantizer
+
+        HuffmanEncoder<int> indicator_huffman;
+        HuffmanEncoder<int> reg_huffman;
 
         Quantizer quantizer;
         Config conf;

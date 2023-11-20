@@ -56,12 +56,12 @@ namespace SZMETA {
                                    const meta_params &params) {
         size_t reg_unpredictable_count = 0;
         size_t remaining_length = RegCoeffNum3d * reg_count;//fake, has no meaning
-        SZ::read(reg_unpredictable_count, compressed_pos, remaining_length);
+        SZ3::read(reg_unpredictable_count, compressed_pos, remaining_length);
         const float *reg_unpredictable_data_pos = (const float *) compressed_pos;
         compressed_pos += reg_unpredictable_count * sizeof(float);
 
 //        int *reg_type = Huffman_decode_tree_and_data(2 * RegCoeffCapacity, RegCoeffNum3d * reg_count, compressed_pos);
-        SZ::HuffmanEncoder<int> selector_encoder = SZ::HuffmanEncoder<int>();
+        SZ3::HuffmanEncoder<int> selector_encoder = SZ3::HuffmanEncoder<int>();
         selector_encoder.load(compressed_pos, remaining_length);
         auto reg_vector = selector_encoder.decode(compressed_pos, RegCoeffNum3d * reg_count);
         selector_encoder.postprocess_decode();
@@ -91,16 +91,14 @@ namespace SZMETA {
 
     void
     encode_regression_coefficients(const int *reg_params_type, const float *reg_unpredictable_data, size_t reg_count,
-                                   size_t reg_unpredictable_count, unsigned char *&compressed_pos) {
-        SZ::write(reg_unpredictable_count, compressed_pos);
-        SZ::write(reg_unpredictable_data, reg_unpredictable_count, compressed_pos);
+                                   size_t reg_unpredictable_count, SZ3::HuffmanEncoder<int> &reg_huffman, unsigned char *&compressed_pos) {
+        SZ3::write(reg_unpredictable_count, compressed_pos);
+        SZ3::write(reg_unpredictable_data, reg_unpredictable_count, compressed_pos);
 
-        SZ::HuffmanEncoder<int> selector_encoder = SZ::HuffmanEncoder<int>();
-        selector_encoder.preprocess_encode(reg_params_type, reg_count, 0);
-        selector_encoder.save(compressed_pos);
-        selector_encoder.encode(reg_params_type, reg_count, compressed_pos);
-        selector_encoder.postprocess_encode();
-
+//        reg_huffman.preprocess_encode(reg_params_type, reg_count, 0);
+        reg_huffman.save(compressed_pos);
+        reg_huffman.encode(reg_params_type, reg_count, compressed_pos);
+        reg_huffman.postprocess_encode();
 //        Huffman_encode_tree_and_data(2 * RegCoeffCapacity, reg_params_type, reg_count, compressed_pos);
     }
 
