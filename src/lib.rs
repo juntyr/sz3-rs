@@ -554,7 +554,12 @@ type Result<T> = std::result::Result<T, SZ3Error>;
 impl<'a, V: SZ3Compressible> DimensionedDataBuilder<'a, V> {
     pub fn dim(mut self, length: usize) -> Result<Self> {
         if length == 1 {
-            Err(SZ3Error::OneSizedDimension)
+            if self.dims.is_empty() && self.remainder == 1 {
+                self.dims.push(1);
+                Ok(self)
+            } else {
+                Err(SZ3Error::OneSizedDimension)
+            }
         } else if self.remainder.rem_euclid(length) != 0 {
             Err(SZ3Error::InvalidDimensionSize {
                 dims: self.dims,
