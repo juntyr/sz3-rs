@@ -1,4 +1,4 @@
-use std::{collections::HashSet, env, path::PathBuf};
+use std::{collections::HashSet, env, path::{Path, PathBuf}};
 
 #[derive(Debug)]
 struct IgnoreMacros(HashSet<String>);
@@ -33,8 +33,8 @@ fn main() -> Result<(), std::env::VarError> {
         .clang_arg("-x")
         .clang_arg("c++")
         .clang_arg("-std=c++17")
-        .clang_arg("-I.")
-        .clang_arg(format!("-I{}/include", zstd_root))
+        .clang_arg(format!("-I{}", Path::new("SZ3").join("include").display()))
+        .clang_arg(format!("-I{}", Path::new(&zstd_root).join("include").display()))
         .header("wrapper.hpp")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
         .parse_callbacks(Box::new(ignored_macros))
@@ -70,8 +70,8 @@ fn main() -> Result<(), std::env::VarError> {
         .cpp(true)
         .warnings(false)
         .flag("-std=c++17")
-        .include(".")
-        .include(format!("{}/include", zstd_root))
+        .include(format!("{}", Path::new("SZ3").join("include").display()))
+        .include(format!("{}", Path::new(&zstd_root).join("include").display()))
         .file("lib.cpp");
 
     if cfg!(feature = "openmp") {

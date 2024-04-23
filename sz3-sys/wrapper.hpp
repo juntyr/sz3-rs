@@ -1,28 +1,28 @@
 #include "SZ3/api/sz.hpp"
 
 struct SZ3_Config {
-    char N;
-    size_t * dims;
-    size_t num;
+    char N = 0;
+    size_t * dims = nullptr;
+    size_t num = 0;
     uint8_t cmprAlgo = SZ3::ALGO_INTERP_LORENZO;
     uint8_t errorBoundMode = SZ3::EB_ABS;
-    double absErrorBound;
-    double relErrorBound;
-    double psnrErrorBound;
-    double l2normErrorBound;
+    double absErrorBound = 0.0;
+    double relErrorBound = 0.0;
+    double psnrErrorBound = 0.0;
+    double l2normErrorBound = 0.0;
     bool lorenzo = true;
     bool lorenzo2 = false;
     bool regression = true;
-    bool regression2 = true;
+    bool regression2 = false;
     bool openmp = false;
     uint8_t lossless = 1;
     uint8_t encoder = 1;
     uint8_t interpAlgo = SZ3::INTERP_ALGO_CUBIC;
     int interpBlockSize = 32;
     int quantbinCnt = 65536;
-    int blockSize;
-    int stride;
-    int pred_dim;
+    int blockSize = 0;
+    int stride = 0;
+    int pred_dim = 0;
 
     SZ3::Config into() {
         auto conf = SZ3::Config{};
