@@ -803,7 +803,7 @@ mod tests {
         f64: From<T>,
     {
         let config = config.clone().error_bound(error_bound);
-        let (decompressed_config, decompressed_data) =
+        let (_decompressed_config, decompressed_data) =
             decompress::<T, _>(&*compress_with_config(data, &config)?);
         let min = data
             .data()
@@ -843,12 +843,7 @@ mod tests {
                     })
                     .sum();
                 let psnr = 20. * (max - min).log10() - 10. * mse.log10();
-                if !matches!(
-                    decompressed_config.compression_algorithm,
-                    CompressionAlgorithm::NoPrediction | CompressionAlgorithm::Lossless
-                ) {
-                    assert!(psnr < psnr_bound);
-                }
+                assert!(psnr < psnr_bound);
             }
             ErrorBound::L2Norm(l2norm_bound) => {
                 let mse: f64 = data
