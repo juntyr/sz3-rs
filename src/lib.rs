@@ -843,7 +843,8 @@ mod tests {
                     })
                     .sum();
                 let psnr = 20. * (max - min).log10() - 10. * mse.log10();
-                assert!(psnr < psnr_bound);
+                // PSNR for zero error is infinity but meets the bound
+                assert!(mse == 0.0 || psnr < psnr_bound);
             }
             ErrorBound::L2Norm(l2norm_bound) => {
                 let mse: f64 = data
@@ -882,6 +883,12 @@ mod tests {
                     let rel = abs / range;
                     assert!((rel < relative_bound) || (abs < absolute_bound));
                 }
+            }
+        }
+
+        if matches!(config.compression_algorithm, CompressionAlgorithm::Lossless) {
+            for (orig, compressed) in data.data().iter().zip(decompressed_data.data()) {
+                assert_eq!(f64::from(*orig).to_bits(), f64::from(*compressed).to_bits());
             }
         }
 
